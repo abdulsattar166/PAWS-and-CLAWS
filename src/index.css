@@ -147,6 +147,39 @@ h1, h2, h3, h4, h5, h6 {
   to { transform: translateX(-50%); }
 }
 
+/* ── Customer testimonials — seamless horizontal marquee ── */
+.ct-marquee-viewport {
+  position: relative;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+}
+.ct-marquee {
+  display: flex;
+  width: max-content;
+  animation-name: ctMarquee;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+.ct-marquee-group {
+  display: flex;
+  align-items: stretch;
+}
+/* Pause on hover, keyboard focus, or when the visitor asks for it. */
+.ct-marquee:hover,
+.ct-marquee:focus-within,
+.ct-marquee.is-paused {
+  animation-play-state: paused;
+}
+@keyframes ctMarquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ct-marquee { animation: none; }
+}
+
 /* Page transition — smooth fade on mount */
 .page-transition {
   opacity: 0;
@@ -172,18 +205,24 @@ h1, h2, h3, h4, h5, h6 {
   transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
               transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.reveal-stagger.is-visible > *:nth-child(1)  { transition-delay: 0ms;   opacity: 1; transform: translateY(0); }
-.reveal-stagger.is-visible > *:nth-child(2)  { transition-delay: 90ms;  opacity: 1; transform: translateY(0); }
-.reveal-stagger.is-visible > *:nth-child(3)  { transition-delay: 180ms; opacity: 1; transform: translateY(0); }
-.reveal-stagger.is-visible > *:nth-child(4)  { transition-delay: 270ms; opacity: 1; transform: translateY(0); }
-.reveal-stagger.is-visible > *:nth-child(5)  { transition-delay: 360ms; opacity: 1; transform: translateY(0); }
-.reveal-stagger.is-visible > *:nth-child(6)  { transition-delay: 450ms; opacity: 1; transform: translateY(0); }
-.reveal-stagger.is-visible > *:nth-child(7)  { transition-delay: 540ms; opacity: 1; transform: translateY(0); }
-.reveal-stagger.is-visible > *:nth-child(8)  { transition-delay: 630ms; opacity: 1; transform: translateY(0); }
-.reveal-stagger.is-visible > *:nth-child(9)  { transition-delay: 720ms; opacity: 1; transform: translateY(0); }
-.reveal-stagger.is-visible > *:nth-child(10) { transition-delay: 810ms; opacity: 1; transform: translateY(0); }
-.reveal-stagger.is-visible > *:nth-child(11) { transition-delay: 900ms; opacity: 1; transform: translateY(0); }
-.reveal-stagger.is-visible > *:nth-child(12) { transition-delay: 990ms; opacity: 1; transform: translateY(0); }
+/* Every child is revealed once the group is in view — no limit on count. */
+.reveal-stagger.is-visible > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* The first twelve children cascade in; any extra children appear at once. */
+.reveal-stagger.is-visible > *:nth-child(1)  { transition-delay: 0ms; }
+.reveal-stagger.is-visible > *:nth-child(2)  { transition-delay: 90ms; }
+.reveal-stagger.is-visible > *:nth-child(3)  { transition-delay: 180ms; }
+.reveal-stagger.is-visible > *:nth-child(4)  { transition-delay: 270ms; }
+.reveal-stagger.is-visible > *:nth-child(5)  { transition-delay: 360ms; }
+.reveal-stagger.is-visible > *:nth-child(6)  { transition-delay: 450ms; }
+.reveal-stagger.is-visible > *:nth-child(7)  { transition-delay: 540ms; }
+.reveal-stagger.is-visible > *:nth-child(8)  { transition-delay: 630ms; }
+.reveal-stagger.is-visible > *:nth-child(9)  { transition-delay: 720ms; }
+.reveal-stagger.is-visible > *:nth-child(10) { transition-delay: 810ms; }
+.reveal-stagger.is-visible > *:nth-child(11) { transition-delay: 900ms; }
+.reveal-stagger.is-visible > *:nth-child(12) { transition-delay: 990ms; }
 
 /* Users who prefer reduced motion always see the content immediately. */
 @media (prefers-reduced-motion: reduce) {

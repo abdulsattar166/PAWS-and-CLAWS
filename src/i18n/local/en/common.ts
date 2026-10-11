@@ -122,6 +122,8 @@ export default {
   "testimonials.leave_review": "Leave a review",
   "testimonials.leave_review_note": "Had a great experience? Tell the world on Google.",
   "testimonials.own_empty": "Our testimonials are on their way — check back soon.",
+  "testimonials.marquee_pause": "Pause scrolling",
+  "testimonials.marquee_play": "Play scrolling",
   "testimonials.review_us": "Review Us on Google",
   "testimonials.demo_badge": "Demo review",
   "testimonials.demo_banner": "Sample content for preview — these placeholder entries are shown only to demonstrate the layout and are not genuine Google reviews. Connect your Google Business Profile in the Admin Panel to display real customer reviews.",
