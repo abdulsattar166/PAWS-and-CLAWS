@@ -529,7 +529,7 @@ export default function BookingForm({ t }: BookingFormProps) {
                 onClick={() => setSlot(active ? "" : s)}
                 aria-pressed={active}
                 title={label || undefined}
-                className={`relative px-3 py-2.5 rounded-xl text-xs font-medium border transition-all duration-300 whitespace-nowrap ${
+                className={`relative px-3 py-2.5 rounded-xl text-xs font-medium leading-tight border transition-all duration-300 ${
                   booked
                     ? "bg-background-200/70 border-background-200/70 text-foreground-400 cursor-not-allowed line-through"
                     : past || disabled

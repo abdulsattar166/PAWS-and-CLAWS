@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface UseScrollRevealOptions {
   threshold?: number;
@@ -6,30 +6,63 @@ interface UseScrollRevealOptions {
   once?: boolean;
 }
 
+/**
+ * Reveals an element as it scrolls into view.
+ *
+ * Uses a *callback ref* so the element is observed the moment it mounts — even
+ * when it renders conditionally after async data loads (reviews, gallery, …).
+ * A plain `useRef` would miss that case and leave the content stuck at
+ * `opacity: 0`, which is why sections used to disappear.
+ *
+ * Also reveals anything already on screen at mount and falls back to visible
+ * when IntersectionObserver is unavailable, so content can never stay hidden.
+ */
 export function useScrollReveal(options: UseScrollRevealOptions = {}) {
-  const { threshold = 0.12, rootMargin = '0px 0px -40px 0px', once = true } = options;
-  const ref = useRef<HTMLDivElement>(null);
+  const { threshold = 0, rootMargin = '0px 0px -40px 0px', once = true } = options;
   const [isVisible, setIsVisible] = useState(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+  const ref = useCallback(
+    (el: HTMLElement | null) => {
+      // Clean up any observer from a previous node.
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+      if (!el || typeof window === 'undefined') return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          if (once) observer.unobserve(el);
-        } else if (!once) {
-          setIsVisible(false);
-        }
-      },
-      { threshold, rootMargin }
-    );
+      // Anything already within (or above) the viewport shows immediately.
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      const rect = el.getBoundingClientRect();
+      if (rect.top < viewportHeight && rect.bottom > 0) {
+        setIsVisible(true);
+        if (once) return;
+      }
 
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [threshold, rootMargin, once]);
+      if (typeof IntersectionObserver === 'undefined') {
+        setIsVisible(true);
+        return;
+      }
+
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            if (once) observer.disconnect();
+          } else if (!once) {
+            setIsVisible(false);
+          }
+        },
+        { threshold, rootMargin },
+      );
+
+      observer.observe(el);
+      observerRef.current = observer;
+    },
+    [threshold, rootMargin, once],
+  );
+
+  useEffect(() => () => observerRef.current?.disconnect(), []);
 
   return { ref, isVisible };
 }

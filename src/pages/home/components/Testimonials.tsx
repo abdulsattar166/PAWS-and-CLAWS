@@ -161,17 +161,22 @@ export default function Testimonials() {
             </div>
 
             {list.length > 1 && (
-              <div className="mt-12 flex items-center justify-center gap-2">
+              <div className="mt-10 flex items-center justify-center gap-1">
                 {list.map((_, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setActive(idx)}
                     aria-label={`View review ${idx + 1}`}
-                    className={`transition-all duration-300 rounded-full cursor-pointer ${
-                      idx === safeIndex ? "w-10 h-1.5 bg-primary-400" : "w-4 h-1.5 bg-background-300 hover:bg-background-200 hover:w-6"
-                    }`}
-                  ></button>
+                    aria-current={idx === safeIndex}
+                    className="group flex h-10 w-10 items-center justify-center cursor-pointer"
+                  >
+                    <span
+                      className={`block rounded-full transition-all duration-300 ${
+                        idx === safeIndex ? "w-8 h-2 bg-primary-400" : "w-2.5 h-2.5 bg-background-300 group-hover:bg-background-200"
+                      }`}
+                    />
+                  </button>
                 ))}
               </div>
             )}

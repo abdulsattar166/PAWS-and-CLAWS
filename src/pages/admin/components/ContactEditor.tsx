@@ -64,7 +64,7 @@ export default function ContactEditor() {
       <Block icon="ri-map-pin-line" title="Service area & map">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <TextField label="Section title" value={draft.mapTitle} onChange={(v) => patch({ mapTitle: v })} placeholder={DEFAULT_CONTACT.mapTitle} />
-          <TextField label="Map search query" value={draft.mapQuery} onChange={(v) => patch({ mapQuery: v })} placeholder={DEFAULT_CONTACT.mapQuery} hint="The location the embedded Google map points to." />
+          <TextField label="Map search query" value={draft.mapQuery} onChange={(v) => patch({ mapQuery: v })} placeholder={DEFAULT_CONTACT.mapQuery} hint="Leave as-is to pin both Abu Dhabi and Al Ain. Enter any other place to centre the map there instead." />
         </div>
         <StringListEditor
           items={draft.serviceAreaItems}

@@ -57,7 +57,14 @@ export default function Contact() {
   const infoTitle = content.infoTitle || t("contact_page.info_title");
   const formTitle = content.formTitle || t("contact_page.form_title");
   const mapTitle = content.mapTitle || t("contact_page.map_title");
-  const mapQuery = content.mapQuery || "Abu Dhabi and Al Ain, United Arab Emirates";
+  const DEFAULT_MAP_QUERY = "Abu Dhabi and Al Ain, United Arab Emirates";
+  const mapQuery = content.mapQuery || DEFAULT_MAP_QUERY;
+  // By default the map shows the whole service corridor with BOTH hubs pinned
+  // (Abu Dhabi → Al Ain). A custom query set in the Admin Panel overrides it.
+  const mapSrc =
+    mapQuery === DEFAULT_MAP_QUERY
+      ? `https://www.google.com/maps?saddr=${encodeURIComponent("Abu Dhabi, United Arab Emirates")}&daddr=${encodeURIComponent("Al Ain, United Arab Emirates")}&z=9&output=embed`
+      : `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=9&output=embed`;
   const followLabel = content.followLabel || t("contact_page.follow_us_title");
   const followTitle = content.followTitle || t("contact_page.follow_us_title");
   const followSubtitle = content.followSubtitle || t("contact_page.follow_us_subtitle");
@@ -213,39 +220,53 @@ export default function Contact() {
           </section>
         )}
 
-        {/* Map */}
+        {/* Map — centred, responsive service area (both hubs pinned) */}
         {s.map && (
           <RevealWrap>
             <section className="py-14 md:py-20 px-4 md:px-10 bg-background-100/88">
-              <div className="max-w-7xl mx-auto">
-                <h2 className="font-heading text-3xl text-foreground-950 text-center mb-8">{mapTitle}</h2>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                  <div className="lg:col-span-2 rounded-2xl md:rounded-3xl overflow-hidden h-[300px] md:h-[400px] card-lift">
+              <div className="max-w-4xl mx-auto">
+                <h2 className="font-heading text-3xl text-foreground-950 text-center mb-3">{mapTitle}</h2>
+                <p className="text-sm md:text-base text-foreground-600 text-center max-w-2xl mx-auto mb-8">
+                  We bring the mobile salon to homes across Abu Dhabi, Al Ain and the surrounding islands.
+                </p>
+
+                <div className="mx-auto w-full rounded-2xl md:rounded-3xl overflow-hidden border border-background-200/70 bg-background-50 card-lift">
+                  <div className="relative w-full aspect-[5/4] sm:aspect-[16/10]">
                     <iframe
-                      src={`https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=9&output=embed`}
-                      width="100%"
-                      height="100%"
+                      src={mapSrc}
+                      className="absolute inset-0 w-full h-full"
                       style={{ border: 0 }}
                       allowFullScreen
                       loading="lazy"
                       referrerPolicy="no-referrer-when-downgrade"
-                      title="Paws and Claws Service Area"
+                      title="Paws and Claws service area — Abu Dhabi & Al Ain"
                     ></iframe>
                   </div>
-                  {serviceAreaItems.length > 0 && (
-                    <div className="rounded-2xl md:rounded-3xl bg-background-50 border border-background-200/70 p-5 md:p-6">
-                      <h3 className="font-heading text-lg text-foreground-950">{serviceAreaTitle}</h3>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {serviceAreaItems.map((area) => (
-                          <span key={area} className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-secondary-100 text-secondary-900">
-                            <i className="ri-map-pin-line" aria-hidden="true"></i>
-                            {area}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
+
+                {/* Both service hubs are marked on the map */}
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-background-50 border border-background-200/70 px-4 py-2 text-sm font-medium text-foreground-800">
+                    <i className="ri-map-pin-2-fill text-primary-500" aria-hidden="true"></i> Abu Dhabi
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-background-50 border border-background-200/70 px-4 py-2 text-sm font-medium text-foreground-800">
+                    <i className="ri-map-pin-2-fill text-accent-500" aria-hidden="true"></i> Al Ain
+                  </span>
+                </div>
+
+                {serviceAreaItems.length > 0 && (
+                  <div className="mt-6 rounded-2xl md:rounded-3xl bg-background-50 border border-background-200/70 p-5 md:p-6">
+                    <h3 className="font-heading text-lg text-foreground-950 text-center">{serviceAreaTitle}</h3>
+                    <div className="mt-4 flex flex-wrap justify-center gap-2">
+                      {serviceAreaItems.map((area) => (
+                        <span key={area} className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-secondary-100 text-secondary-900">
+                          <i className="ri-map-pin-line" aria-hidden="true"></i>
+                          {area}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
           </RevealWrap>

@@ -87,6 +87,14 @@ body {
   background-color: oklch(var(--background-50));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent accidental horizontal scrolling on small screens without creating
+     a scroll container (which would break the sticky navbar). */
+  overflow-x: clip;
+}
+
+img,
+video {
+  max-width: 100%;
 }
 
 @media (max-width: 768px) {
@@ -176,6 +184,16 @@ h1, h2, h3, h4, h5, h6 {
 .reveal-stagger.is-visible > *:nth-child(10) { transition-delay: 810ms; opacity: 1; transform: translateY(0); }
 .reveal-stagger.is-visible > *:nth-child(11) { transition-delay: 900ms; opacity: 1; transform: translateY(0); }
 .reveal-stagger.is-visible > *:nth-child(12) { transition-delay: 990ms; opacity: 1; transform: translateY(0); }
+
+/* Users who prefer reduced motion always see the content immediately. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-section,
+  .reveal-stagger > * {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
 
 /* Card hover lift + soft brand glow */
 .card-lift {
@@ -522,12 +540,6 @@ h1, h2, h3, h4, h5, h6 {
   /* Reduce image heights on mobile */
   .img-zoom {
     transition: transform 0.4s ease;
-  }
-
-  /* Touch-friendly minimum tap targets */
-  a, button, [role="button"] {
-    min-height: 40px;
-    min-width: 40px;
   }
 
   /* Remove backdrop blur on mobile for performance */

@@ -99,7 +99,7 @@ export default function Navbar() {
           <a
             href={contactTel}
             aria-label="Call us"
-            className="w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer active:scale-95 transition-transform text-foreground-900 bg-foreground-950/10 backdrop-blur-sm"
+            className="hidden sm:flex w-10 h-10 items-center justify-center rounded-xl cursor-pointer active:scale-95 transition-transform text-foreground-900 bg-foreground-950/10 backdrop-blur-sm"
           >
             <i className="ri-phone-line text-lg" aria-hidden="true"></i>
           </a>

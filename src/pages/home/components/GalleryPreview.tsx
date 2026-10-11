@@ -40,7 +40,7 @@ export default function GalleryPreview() {
         <div ref={ref} className={`reveal-stagger grid grid-cols-2 md:grid-cols-3 gap-4 ${isVisible ? 'is-visible' : ''}`}>
           {preview.map((img) => (
             <div key={img.id} className="group rounded-2xl overflow-hidden cursor-pointer">
-              <img src={img.imageUrl} alt={img.alt} title={`${img.title || "Pet grooming"} — Paws & Claws gallery`} className="img-zoom img-reveal w-full h-72 object-cover object-top" />
+              <img src={img.imageUrl} alt={img.alt} title={`${img.title || "Pet grooming"} — Paws & Claws gallery`} className="img-zoom img-reveal w-full h-40 sm:h-56 md:h-72 object-cover object-top" />
             </div>
           ))}
         </div>

@@ -44,7 +44,7 @@ export default function FloatingButtons() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="See Our Instagram Page"
-        className="animate-instagram-blink group block"
+        className="hidden md:block animate-instagram-blink group"
       >
         <div className="flex items-center text-white rounded-full h-12 md:h-14 min-w-12 md:min-w-14 pl-3 md:pl-3.5 pr-3 md:pr-3.5 transition-all duration-300 ease-out shadow-lg cursor-pointer group-hover:pr-5"
           style={{
@@ -64,7 +64,7 @@ export default function FloatingButtons() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Add Us on Snapchat"
-        className="animate-snapchat-blink group block"
+        className="hidden md:block animate-snapchat-blink group"
       >
         <div className="flex items-center bg-[#FFFC00] hover:bg-[#f2ef00] text-[#111111] rounded-full h-12 md:h-14 min-w-12 md:min-w-14 pl-3 md:pl-3.5 pr-3 md:pr-3.5 transition-all duration-300 ease-out shadow-lg cursor-pointer group-hover:pr-5">
           <i className="ri-snapchat-line text-xl md:text-2xl flex-shrink-0 w-6 h-6 md:w-7 md:h-7 flex items-center justify-center" aria-hidden="true"></i>

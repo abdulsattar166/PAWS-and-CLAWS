@@ -86,10 +86,10 @@ export default function ServicesPreview() {
                   </div>
                   <Link
                     to="/booking"
-                    className="btn-pulse w-9 h-9 rounded-full bg-secondary-500 text-white flex items-center justify-center hover:bg-secondary-400 transition-colors cursor-pointer"
+                    className="btn-pulse w-11 h-11 rounded-full bg-secondary-500 text-white flex items-center justify-center hover:bg-secondary-400 transition-colors cursor-pointer"
                     aria-label={`Book ${service.name}`}
                   >
-                    <i className="ri-arrow-right-up-line text-base" aria-hidden="true"></i>
+                    <i className="ri-arrow-right-up-line text-lg" aria-hidden="true"></i>
                   </Link>
                 </div>
               </article>

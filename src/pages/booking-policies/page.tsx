@@ -158,7 +158,7 @@ export default function BookingPolicies() {
                     className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-background-50 border border-background-200/70 text-xs font-medium text-foreground-700 card-lift"
                   >
                     <i className="ri-time-line text-accent-500 text-sm" aria-hidden="true"></i>
-                    <span className="whitespace-nowrap">{slot}</span>
+                    <span className="leading-tight">{slot}</span>
                   </div>
                 ))}
               </div>
