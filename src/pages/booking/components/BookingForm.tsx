@@ -277,15 +277,19 @@ export default function BookingForm({ t }: BookingFormProps) {
         data = {};
       }
 
-      if (!res.ok || data.ok === false) {
+      if (!res.ok || data.ok !== true) {
         if (data.error === "slot_taken") {
           setError(t("booking.slot_taken"));
           reloadAvailability();
-        } else if (data.error === "slot_past" || data.error === "invalid_date") {
+        } else if (data.error === "slot_past" || data.error === "invalid_date" || data.error === "invalid_slot") {
           setError(t("booking.err_slot_past"));
           reloadAvailability();
         } else if (data.error === "invalid_service") {
           setError(t("booking.err_service_mismatch"));
+        } else if (data.error === "size_required" || data.error === "invalid_size") {
+          setError(t("booking.err_size"));
+        } else if (data.error === "validation" || data.error === "invalid_pet_type") {
+          setError(t("booking.err_required"));
         } else {
           setError(t("booking.create_error"));
         }
@@ -361,7 +365,7 @@ export default function BookingForm({ t }: BookingFormProps) {
           date={date}
           slot={slot}
           pet={{ name: form.pet_name, type: form.pet_type, breed: form.pet_breed, size: form.pet_size }}
-          customer={{ name: form.name, email: form.email, phone: form.phone, whatsapp: form.whatsapp }}
+          customer={{ name: form.name, email: form.email, phone: form.phone, whatsapp: form.whatsapp.trim() || form.phone }}
           address={address}
           location={location}
           health={form.health}
@@ -448,7 +452,7 @@ export default function BookingForm({ t }: BookingFormProps) {
               ))}
             </datalist>
           </div>
-          {form.pet_type === "dog" && (
+          {needsSize && (
             <div>
               <label htmlFor="b-size" className={labelClass}>{t("booking.pet_size")}</label>
               <select

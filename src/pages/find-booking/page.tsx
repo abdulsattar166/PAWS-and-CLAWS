@@ -161,11 +161,14 @@ export default function FindBooking() {
     runLookup(ref.trim(), phone.trim());
   };
 
-  // Pre-fill the reference when arriving from the success page. The customer
-  // still has to confirm their phone number before details are shown.
+  // Pre-fill from the success/done step. When both the reference and the phone
+  // are provided, run the lookup immediately so the tracking shows straight away.
   useEffect(() => {
-    const initial = searchParams.get("ref");
-    if (initial && initial.trim()) setRef(initial.trim());
+    const initialRef = searchParams.get("ref")?.trim() ?? "";
+    const initialPhone = searchParams.get("phone")?.trim() ?? "";
+    if (initialRef) setRef(initialRef);
+    if (initialPhone) setPhone(initialPhone);
+    if (initialRef && initialPhone) runLookup(initialRef, initialPhone);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

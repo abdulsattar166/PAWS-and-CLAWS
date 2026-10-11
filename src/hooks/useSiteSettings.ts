@@ -7,6 +7,8 @@ export interface ContactSettings {
   phone: string;
   whatsapp: string;
   whatsappNumber: string;
+  /** WhatsApp number that receives new-booking alerts (digits only). */
+  adminWhatsapp: string;
   email: string;
   address: string;
   hours: string;
@@ -144,6 +146,7 @@ export const FALLBACK_SETTINGS: SiteSettings = {
     phone: BUSINESS.phone,
     whatsapp: BUSINESS.whatsapp,
     whatsappNumber: BUSINESS.whatsappNumber,
+    adminWhatsapp: BUSINESS.whatsappNumber,
     email: BUSINESS.email,
     address: "Al Ain, United Arab Emirates",
     hours: "Daily 8:00 AM – 8:00 PM",

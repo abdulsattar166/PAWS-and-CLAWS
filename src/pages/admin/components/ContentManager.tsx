@@ -95,6 +95,9 @@ export default function ContentManager() {
           <Field label="WhatsApp number (international, digits only)" hint="Used to build wa.me links, e.g. 971557033165">
             <input value={contact.whatsappNumber} onChange={(e) => setContact({ ...contact, whatsappNumber: e.target.value.replace(/[^0-9]/g, "") })} className={inputCls} />
           </Field>
+          <Field label="Admin WhatsApp for booking alerts" hint="New bookings are sent to this number as a WhatsApp copy, e.g. 971557033165">
+            <input value={contact.adminWhatsapp} onChange={(e) => setContact({ ...contact, adminWhatsapp: e.target.value.replace(/[^0-9]/g, "") })} className={inputCls} />
+          </Field>
           <Field label="Email address"><input value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} className={inputCls} /></Field>
           <Field label="Business address"><input value={contact.address} onChange={(e) => setContact({ ...contact, address: e.target.value })} className={inputCls} /></Field>
           <Field label="Opening hours"><input value={contact.hours} onChange={(e) => setContact({ ...contact, hours: e.target.value })} className={inputCls} /></Field>

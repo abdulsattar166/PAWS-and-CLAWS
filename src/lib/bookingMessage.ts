@@ -141,6 +141,47 @@ export function buildWhatsAppBookingDetails(b: PaymentBookingInfo): string {
   return lines.join("\n");
 }
 
+/**
+ * Full booking copy sent automatically to the ADMIN's WhatsApp so the team has
+ * an instant reference. Includes every detail the customer entered, the payment
+ * screenshot link, and a direct link to approve the request in the Admin Panel.
+ */
+export function buildAdminBookingCopy(
+  b: PaymentBookingInfo,
+  opts: { screenshotUrl?: string; adminUrl?: string } = {},
+): string {
+  const lines: string[] = ["🚨 *NEW BOOKING REQUEST — Paws and Claws*", ""];
+  lines.push(`Booking Reference: ${b.ref || "Pending"}`);
+  lines.push("Status: Pending admin approval");
+  lines.push("");
+  lines.push("*Customer*");
+  lines.push(`Name: ${b.customerName}`);
+  lines.push(`Phone: ${b.customerPhone}`);
+  if (whatsappLine(b) !== "-") lines.push(`WhatsApp: ${whatsappLine(b)}`);
+  if (b.customerEmail) lines.push(`Email: ${b.customerEmail}`);
+  lines.push("");
+  lines.push(`*Pet:* ${petLine(b)}`);
+  lines.push("");
+  lines.push("*Selected services:*");
+  b.services.forEach((s) => lines.push(`• ${s.name} — ${money(s.price)}`));
+  if (typeof b.discount === "number" && b.discount > 0) {
+    lines.push(`Discount: ${b.discountLabel || "Applied"} — - ${money(b.discount)}`);
+  }
+  lines.push(`*Total amount: ${money(b.amount)}*`);
+  lines.push("");
+  lines.push(`*Arrival window:* ${formatDate(b.date)} · ${b.slot}`);
+  lines.push(`*Service address:* ${fullAddressLine(b)}`);
+  if (b.address?.landmark) lines.push(`Landmark / Directions: ${b.address.landmark}`);
+  if (b.completeAddress) lines.push(`Notes address: ${b.completeAddress}`);
+  lines.push(`*Live location:* ${locationLine(b)}`);
+  lines.push("");
+  lines.push(`*Payment screenshot:* ${opts.screenshotUrl || "Uploaded on the website (see Admin Panel)"}`);
+  if (opts.adminUrl) lines.push(`*Open in Admin Panel:* ${opts.adminUrl}`);
+  lines.push("");
+  lines.push("Please review and approve this booking in the Admin Panel.");
+  return lines.join("\n");
+}
+
 /** Tracking message from the customer asking for a status update. */
 export function buildWhatsAppTrackMessage(ref: string): string {
   const lines: string[] = ["Hello, I would like to check the status of my pet spa booking."];

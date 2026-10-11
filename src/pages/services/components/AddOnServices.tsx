@@ -13,7 +13,7 @@ export default function AddOnServices() {
   const { t } = useTranslation();
   const { prices } = useServicePrices();
   const { content } = usePageContent("medical");
-  const medical = { ...DEFAULT_MEDICAL, ...content };
+  const medical = { ...DEFAULT_MEDICAL, ...content, items: content.items ?? DEFAULT_MEDICAL.items };
   const medicalRef = useScrollReveal();
   const hairRef = useScrollReveal();
   const extraRef = useScrollReveal();

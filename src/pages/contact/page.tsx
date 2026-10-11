@@ -126,7 +126,7 @@ export default function Contact() {
                     <h2 className="font-heading text-3xl text-foreground-950">{infoTitle}</h2>
                     <div className="mt-8 space-y-6">
                       {contactItems.map((item) => (
-                        <div key={item.value} className="flex items-start gap-4 card-lift">
+                        <div key={item.label} className="flex items-start gap-4 card-lift">
                           <span className={`w-12 h-12 rounded-2xl ${item.bg} ${item.text} flex items-center justify-center shrink-0`}>
                             <i className={`${item.icon} text-xl`} aria-hidden="true"></i>
                           </span>

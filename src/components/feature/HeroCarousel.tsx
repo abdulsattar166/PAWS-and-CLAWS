@@ -17,6 +17,8 @@ export default function HeroCarousel({ slides, interval = 5000, children }: Hero
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isHovered = useRef(false);
   const isTouchDevice = useRef(false);
+  // Never divide/modulo by zero when an admin saves a slideshow with no images.
+  const slideCount = Math.max(slides.length, 1);
 
   useEffect(() => {
     isTouchDevice.current = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -30,18 +32,18 @@ export default function HeroCarousel({ slides, interval = 5000, children }: Hero
 
   const next = useCallback(() => {
     setPrevSlide(current);
-    setCurrent((prev) => (prev + 1) % slides.length);
-  }, [current, slides.length]);
+    setCurrent((prev) => (prev + 1) % slideCount);
+  }, [current, slideCount]);
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       if (!isHovered.current) {
         setPrevSlide((prev) => prev ?? 0);
-        setCurrent((prev) => (prev + 1) % slides.length);
+        setCurrent((prev) => (prev + 1) % slideCount);
       }
     }, interval);
-  }, [interval, slides.length]);
+  }, [interval, slideCount]);
 
   useEffect(() => {
     startTimer();
@@ -60,10 +62,10 @@ export default function HeroCarousel({ slides, interval = 5000, children }: Hero
     if (Math.abs(diff) > 60) {
       if (diff > 0) {
         setPrevSlide(current);
-        setCurrent((prev) => (prev + 1) % slides.length);
+        setCurrent((prev) => (prev + 1) % slideCount);
       } else {
         setPrevSlide(current);
-        setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
+        setCurrent((prev) => (prev - 1 + slideCount) % slideCount);
       }
     }
   };
@@ -77,6 +79,9 @@ export default function HeroCarousel({ slides, interval = 5000, children }: Hero
       onTouchEnd={handleTouchEnd}
     >
       {/* Carousel slides */}
+      {slides.length === 0 && (
+        <div className="absolute inset-0 z-0 bg-gradient-to-br from-secondary-600 via-background-700 to-primary-900" aria-hidden="true"></div>
+      )}
       {slides.map((slide, i) => {
         const isCurrent = i === current;
         const isLeaving = i === prevSlide;

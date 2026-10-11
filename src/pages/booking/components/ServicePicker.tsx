@@ -140,18 +140,7 @@ export default function ServicePicker({
     );
   }
 
-  if (petType === "other") {
-    return (
-      <div className="mt-2 flex items-start gap-3 rounded-xl bg-secondary-50 border border-secondary-200/70 px-4 py-5">
-        <i className="ri-customer-service-2-line text-secondary-600 text-lg mt-0.5" aria-hidden="true"></i>
-        <div>
-          <p className="text-sm font-medium text-secondary-900">{t("booking.other_animals_title")}</p>
-          <p className="mt-1 text-xs text-secondary-900/80 leading-relaxed">{t("booking.other_animals_note")}</p>
-        </div>
-      </div>
-    );
-  }
-
+  const isOther = petType === "other";
   const core = services.filter((s) => s.pet_type === petType);
   const addons = services.filter((s) => s.pet_type === PET_TYPE_ALL);
 
@@ -165,6 +154,15 @@ export default function ServicePicker({
 
   return (
     <div className="mt-2 space-y-4">
+      {isOther && (
+        <div className="flex items-start gap-3 rounded-xl bg-secondary-50 border border-secondary-200/70 px-4 py-5">
+          <i className="ri-customer-service-2-line text-secondary-600 text-lg mt-0.5" aria-hidden="true"></i>
+          <div>
+            <p className="text-sm font-medium text-secondary-900">{t("booking.other_animals_title")}</p>
+            <p className="mt-1 text-xs text-secondary-900/80 leading-relaxed">{t("booking.other_animals_note")}</p>
+          </div>
+        </div>
+      )}
       <Group
         label={`${PET_TYPE_LABELS[petType] ?? ""} · ${t("booking.group_services")}`}
         services={core}

@@ -49,7 +49,11 @@ export function useBlogPosts() {
         .order("published_at", { ascending: false });
       if (error) throw error;
       const rows = (data ?? []) as Array<Record<string, unknown>>;
-      setPosts(rows.length ? rows.map(mapRow) : blogArticles);
+      const mapped = rows.length ? rows.map(mapRow) : blogArticles;
+      // DB posts carry no "featured" flag — promote the newest so the Featured
+      // section on the blog page still renders.
+      const anyFeatured = mapped.some((p) => p.featured);
+      setPosts(anyFeatured ? mapped : mapped.map((p, i) => (i === 0 ? { ...p, featured: true } : p)));
     } catch {
       setPosts(blogArticles);
     } finally {

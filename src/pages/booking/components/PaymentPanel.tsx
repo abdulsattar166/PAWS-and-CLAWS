@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { functionsBaseUrl, supabaseAnonKey } from "@/lib/supabase";
 import {
   buildWhatsAppPaymentMessage,
   buildWhatsAppBookingDetails,
+  buildAdminBookingCopy,
   type PaymentBookingInfo,
 } from "@/lib/bookingMessage";
 
@@ -35,6 +36,9 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
   const [bookingStatus, setBookingStatus] = useState("pending_payment");
   const [screenshotUrl, setScreenshotUrl] = useState("");
   const [uploaded, setUploaded] = useState(false);
+  // True once the customer opens the WhatsApp path to send the screenshot —
+  // they are then allowed to confirm even without an on-site upload.
+  const [waSent, setWaSent] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [confirming, setConfirming] = useState(false);
@@ -47,6 +51,30 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
   const bank = settings.bank;
 
   const live: PaymentBookingInfo = useMemo(() => ({ ...info, ref }), [info, ref]);
+
+  // WhatsApp copy sent to the ADMIN with every detail + the payment screenshot
+  // + a direct link to approve the request in the Admin Panel.
+  const adminNumber = settings.contact.adminWhatsapp || settings.contact.whatsappNumber;
+  const adminPanelUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/admin` : "";
+  const adminCopyUrl = useMemo(
+    () =>
+      `https://wa.me/${adminNumber}?text=${encodeURIComponent(
+        buildAdminBookingCopy(live, { screenshotUrl, adminUrl: adminPanelUrl }),
+      )}`,
+    [adminNumber, live, screenshotUrl, adminPanelUrl],
+  );
+
+  // Automatically open the admin WhatsApp copy once the request is submitted.
+  const notifiedRef = useRef(false);
+  useEffect(() => {
+    if (step !== "done" || notifiedRef.current || !adminCopyUrl) return;
+    notifiedRef.current = true;
+    const timer = window.setTimeout(() => {
+      window.open(adminCopyUrl, "_blank", "noopener,noreferrer");
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [step, adminCopyUrl]);
 
   const copy = async (label: string, value: string) => {
     try {
@@ -107,7 +135,7 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
       } catch {
         data = {};
       }
-      if (!res.ok || data.ok === false) {
+      if (!res.ok || data.ok !== true) {
         setUploadError(t("booking.upload_error"));
         return;
       }
@@ -123,7 +151,7 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
   // "Confirm Order": finalize the submission and generate the tracking ID.
   const handleConfirmOrder = async () => {
     if (confirming) return;
-    if (!uploaded) {
+    if (!uploaded && !waSent) {
       setError(t("booking.upload_required"));
       return;
     }
@@ -145,7 +173,7 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
       } catch {
         data = {};
       }
-      if (!res.ok || data.ok === false) {
+      if (!res.ok || data.ok !== true) {
         setError(t("booking.confirm_order_error"));
         return;
       }
@@ -167,7 +195,9 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
   const handleTrack = () => {
     const value = trackRef.trim();
     if (!value) return;
-    navigate(`/find-booking?ref=${encodeURIComponent(value)}`);
+    navigate(
+      `/find-booking?ref=${encodeURIComponent(value)}&phone=${encodeURIComponent(info.customerPhone)}`,
+    );
   };
 
   return (
@@ -392,11 +422,18 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
               href={waScreenshot}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => setWaSent(true)}
               className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-full bg-[#25D366] px-6 py-3.5 text-sm font-semibold text-white whitespace-nowrap cursor-pointer transition-all hover:brightness-95"
             >
               <i className="ri-whatsapp-line text-lg" aria-hidden="true"></i>
               {t("booking.upload_wa_cta")}
             </a>
+            {waSent && (
+              <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-accent-700">
+                <i className="ri-checkbox-circle-line" aria-hidden="true"></i>
+                {t("booking.upload_wa_done")}
+              </p>
+            )}
             <p className="mt-2 text-[11px] text-foreground-500 leading-relaxed">{settings.contact.whatsapp}</p>
           </div>
 
@@ -405,7 +442,7 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
           <button
             type="button"
             onClick={handleConfirmOrder}
-            disabled={confirming || !uploaded}
+            disabled={confirming || (!uploaded && !waSent)}
             className="btn-pulse w-full inline-flex items-center justify-center gap-2.5 rounded-full bg-primary-500 px-6 py-4 text-base font-semibold text-foreground-50 hover:bg-primary-600 transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50"
           >
             <i className={confirming ? "ri-loader-4-line animate-spin" : "ri-check-double-line"} aria-hidden="true"></i>
@@ -476,6 +513,24 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
                 </dd>
               </div>
             </dl>
+          </div>
+
+          {/* Request forwarded to the Admin Panel + WhatsApp copy */}
+          <div className="rounded-2xl bg-background-100 border border-background-200/70 p-5 md:p-6 space-y-3">
+            <p className="flex items-center gap-2 font-heading text-lg text-foreground-950">
+              <i className="ri-shield-check-line text-accent-500" aria-hidden="true"></i>
+              {t("booking.admin_sent_title")}
+            </p>
+            <p className="text-xs text-foreground-600 leading-relaxed">{t("booking.admin_sent_note")}</p>
+            <a
+              href={adminCopyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-center gap-2.5 rounded-full bg-[#25D366] px-6 py-4 text-base font-semibold text-white whitespace-nowrap cursor-pointer transition-all hover:brightness-95 animate-whatsapp-blink"
+            >
+              <i className="ri-whatsapp-line text-xl" aria-hidden="true"></i>
+              {t("booking.admin_sent_cta")}
+            </a>
           </div>
 
           {/* Track your booking */}
