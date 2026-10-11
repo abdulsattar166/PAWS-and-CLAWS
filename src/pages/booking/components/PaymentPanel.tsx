@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { functionsBaseUrl, supabaseAnonKey } from "@/lib/supabase";
@@ -57,24 +57,10 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
   const adminNumber = settings.contact.adminWhatsapp || settings.contact.whatsappNumber;
   const adminPanelUrl =
     typeof window !== "undefined" ? `${window.location.origin}/admin` : "";
-  const adminCopyUrl = useMemo(
-    () =>
-      `https://wa.me/${adminNumber}?text=${encodeURIComponent(
-        buildAdminBookingCopy(live, { screenshotUrl, adminUrl: adminPanelUrl }),
-      )}`,
-    [adminNumber, live, screenshotUrl, adminPanelUrl],
-  );
-
-  // Automatically open the admin WhatsApp copy once the request is submitted.
-  const notifiedRef = useRef(false);
-  useEffect(() => {
-    if (step !== "done" || notifiedRef.current || !adminCopyUrl) return;
-    notifiedRef.current = true;
-    const timer = window.setTimeout(() => {
-      window.open(adminCopyUrl, "_blank", "noopener,noreferrer");
-    }, 900);
-    return () => window.clearTimeout(timer);
-  }, [step, adminCopyUrl]);
+  const buildAdminUrl = (bookingRef: string) =>
+    `https://wa.me/${adminNumber}?text=${encodeURIComponent(
+      buildAdminBookingCopy({ ...info, ref: bookingRef }, { screenshotUrl, adminUrl: adminPanelUrl }),
+    )}`;
 
   const copy = async (label: string, value: string) => {
     try {
@@ -157,6 +143,9 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
     }
     setError("");
     setConfirming(true);
+    // Open a blank tab synchronously inside the click so the browser allows the
+    // automatic redirect to the admin's WhatsApp once the booking is confirmed.
+    const waWindow = typeof window !== "undefined" ? window.open("", "_blank") : null;
     try {
       const res = await fetch(`${functionsBaseUrl}/confirm-payment`, {
         method: "POST",
@@ -174,6 +163,7 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
         data = {};
       }
       if (!res.ok || data.ok !== true) {
+        waWindow?.close();
         setError(t("booking.confirm_order_error"));
         return;
       }
@@ -184,8 +174,19 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
       setPaymentStatus((booking.paymentStatus as string) ?? "under_review");
       setBookingStatus((booking.bookingStatus as string) ?? "pending_payment");
       setStep("done");
+
+      // Automatically send the full booking (details + screenshot) to the
+      // admin's WhatsApp — no customer action required.
+      const adminUrl = buildAdminUrl(finalRef);
+      if (waWindow) {
+        waWindow.location.href = adminUrl;
+      } else if (typeof window !== "undefined") {
+        window.open(adminUrl, "_blank", "noopener,noreferrer");
+      }
+
       if (typeof window !== "undefined") window.scrollTo({ top: 200, behavior: "smooth" });
     } catch {
+      waWindow?.close();
       setError(t("booking.confirm_order_error"));
     } finally {
       setConfirming(false);
@@ -515,22 +516,13 @@ export default function PaymentPanel({ info, t, onReset }: PaymentPanelProps) {
             </dl>
           </div>
 
-          {/* Request forwarded to the Admin Panel + WhatsApp copy */}
-          <div className="rounded-2xl bg-background-100 border border-background-200/70 p-5 md:p-6 space-y-3">
+          {/* Request automatically forwarded to the Admin Panel + admin WhatsApp */}
+          <div className="rounded-2xl bg-background-100 border border-background-200/70 p-5 md:p-6">
             <p className="flex items-center gap-2 font-heading text-lg text-foreground-950">
               <i className="ri-shield-check-line text-accent-500" aria-hidden="true"></i>
               {t("booking.admin_sent_title")}
             </p>
-            <p className="text-xs text-foreground-600 leading-relaxed">{t("booking.admin_sent_note")}</p>
-            <a
-              href={adminCopyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex w-full items-center justify-center gap-2.5 rounded-full bg-[#25D366] px-6 py-4 text-base font-semibold text-white whitespace-nowrap cursor-pointer transition-all hover:brightness-95 animate-whatsapp-blink"
-            >
-              <i className="ri-whatsapp-line text-xl" aria-hidden="true"></i>
-              {t("booking.admin_sent_cta")}
-            </a>
+            <p className="mt-2 text-xs text-foreground-600 leading-relaxed">{t("booking.admin_sent_note")}</p>
           </div>
 
           {/* Track your booking */}

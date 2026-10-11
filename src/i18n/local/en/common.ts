@@ -372,7 +372,7 @@ export default {
   "booking.booked_title": "Your Pet Spa Booking Has Been Successfully Submitted!",
   "booking.booked_notice": "Your booking has been recorded successfully. Your payment is awaiting verification by our administrator. Please save your Tracking ID to check your booking status.",
   "booking.admin_sent_title": "Request sent to our team for approval",
-  "booking.admin_sent_note": "Your booking is now in our Admin Panel awaiting approval — your details and payment screenshot were included. Tap below to send a WhatsApp copy of this request straight to our team.",
+  "booking.admin_sent_note": "Your booking details and payment screenshot have been sent automatically to our Admin Panel and to our team's WhatsApp. We'll update your tracking as soon as your payment is verified and your booking is approved.",
   "booking.admin_sent_cta": "Send booking copy to admin on WhatsApp",
   "booking.booked_payment_status_label": "Payment verification status",
   "booking.booked_payment_under_review": "Awaiting verification",

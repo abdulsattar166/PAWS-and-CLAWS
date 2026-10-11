@@ -109,7 +109,7 @@ export default function Admin() {
         />
 
         <div className="flex-1 min-w-0 flex flex-col">
-          <header className="sticky top-0 z-[90] flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3.5 border-b border-background-200/70 bg-background-100/85 backdrop-blur">
+          <header className="sticky top-0 z-[90] flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3.5 border-b border-background-200/70 bg-background-100 shadow-sm">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}

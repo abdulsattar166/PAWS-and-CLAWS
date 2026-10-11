@@ -1,4 +1,4 @@
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, useLocation } from "react-router-dom";
 import { AppRoutes } from "./router";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./i18n";
@@ -6,6 +6,18 @@ import BackToTop from "@/components/base/BackToTop";
 import FloatingButtons from "@/components/feature/FloatingButtons";
 import ScrollManager from "@/components/base/ScrollManager";
 
+// The floating WhatsApp/call buttons and back-to-top control are for the public
+// site only — they must not cover the Admin Panel UI.
+function SiteChrome() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/admin")) return null;
+  return (
+    <>
+      <BackToTop />
+      <FloatingButtons />
+    </>
+  );
+}
 
 function App() {
   return (
@@ -13,8 +25,7 @@ function App() {
       <BrowserRouter basename={__BASE_PATH__}>
         <ScrollManager />
         <AppRoutes />
-        <BackToTop />
-        <FloatingButtons />
+        <SiteChrome />
       </BrowserRouter>
     </I18nextProvider>
   );
