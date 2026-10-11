@@ -37,7 +37,7 @@ export default function AdminSidebar({
     <>
       {/* Mobile overlay */}
       <div
-        className={`fixed inset-0 z-[110] bg-foreground-950/60 lg:hidden transition-opacity duration-300 ${
+        className={`fixed inset-0 z-40 bg-foreground-950/60 lg:hidden transition-opacity duration-300 ${
           mobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={onCloseMobile}
@@ -45,9 +45,9 @@ export default function AdminSidebar({
       ></div>
 
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-[120] flex flex-col bg-background-50 border-r border-background-200/70 w-[280px] transition-[transform,width] duration-300 ease-out ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col bg-background-50 border-r border-background-200/70 transition-transform duration-300 ease-out lg:sticky lg:top-0 lg:bottom-auto lg:z-20 lg:h-screen lg:shrink-0 lg:translate-x-0 ${
           collapsed ? "lg:w-[84px]" : "lg:w-72"
-        } ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+        } ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         {/* Brand */}
         <div className={`flex items-center gap-3 h-16 px-4 border-b border-background-200/60 shrink-0 ${collapsed ? "lg:justify-center lg:px-0" : ""}`}>

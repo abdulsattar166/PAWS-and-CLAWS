@@ -56,6 +56,12 @@ export default function Admin() {
     };
   }, [mobileOpen]);
 
+  // Reset scroll to the top whenever the admin switches section, so a new page
+  // never opens half-scrolled with its first rows hidden under the sticky header.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [tab]);
+
   const active = ADMIN_NAV_FLAT.find((n) => n.key === tab) ?? ADMIN_NAV_FLAT[0];
 
   const goTo = (next: string, ref?: string) => {
@@ -109,7 +115,7 @@ export default function Admin() {
         />
 
         <div className="flex-1 min-w-0 flex flex-col">
-          <header className="sticky top-0 z-[90] flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3.5 border-b border-background-200/70 bg-background-100 shadow-sm">
+          <header className="sticky top-0 z-30 flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3.5 border-b border-background-200/70 bg-background-100 shadow-sm">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}

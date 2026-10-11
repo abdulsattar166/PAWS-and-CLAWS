@@ -103,7 +103,7 @@ export function Modal({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center p-3 md:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-[60] flex items-start md:items-center justify-center p-3 md:p-6 overflow-y-auto">
       <div className="fixed inset-0 bg-foreground-950/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true"></div>
       <div className={`relative w-full ${wide ? "max-w-3xl" : "max-w-xl"} bg-background-50 rounded-2xl border border-background-200 my-4 md:my-0`}>
         <div className="flex items-center justify-between gap-4 px-5 md:px-6 py-4 border-b border-background-200/80">
