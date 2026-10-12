@@ -148,7 +148,7 @@ export const FALLBACK_SETTINGS: SiteSettings = {
     whatsappNumber: BUSINESS.whatsappNumber,
     adminWhatsapp: BUSINESS.whatsappNumber,
     email: BUSINESS.email,
-    address: "Al Ain, United Arab Emirates",
+    address: "Abu Dhabi & Al Ain",
     hours: "Daily 8:00 AM – 8:00 PM",
   },
   bank: { ...BANK_DETAILS },
