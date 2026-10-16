@@ -10,8 +10,6 @@ import Privacy from "../pages/privacy/page";
 import BookingPolicies from "../pages/booking-policies/page";
 import BlogListing from "../pages/blog/page";
 import BlogDetail from "../pages/blog/detail/page";
-import BookingSuccess from "../pages/booking/success/page";
-import BookingCancelled from "../pages/booking/cancelled/page";
 import FindBooking from "../pages/find-booking/page";
 import Admin from "../pages/admin/page";
 
@@ -55,14 +53,6 @@ const routes: RouteObject[] = [
   {
     path: "/blog/:slug",
     element: <BlogDetail />,
-  },
-  {
-    path: "/booking/success",
-    element: <BookingSuccess />,
-  },
-  {
-    path: "/booking/cancelled",
-    element: <BookingCancelled />,
   },
   {
     path: "/find-booking",

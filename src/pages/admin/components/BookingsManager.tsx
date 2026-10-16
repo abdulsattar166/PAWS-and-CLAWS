@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   BOOKING_STATUS_LABELS,
-  PAYMENT_STATUS_LABELS,
+  ADMIN_STATUS_LABELS,
   aed,
   displayBookingRef,
   formatDateOnly,
@@ -15,7 +15,7 @@ import BookingDetail from "./BookingDetail";
 
 const FILTERS: Array<{ key: BookingStatusFilter; label: string }> = [
   { key: "all", label: "All" },
-  { key: "pending", label: "Pending review" },
+  { key: "pending", label: "Pending approval" },
   { key: "approved", label: "Approved" },
   { key: "rejected", label: "Rejected" },
   { key: "completed", label: "Completed" },
@@ -33,10 +33,17 @@ function matchesFilter(b: BookingRow, filter: BookingStatusFilter): boolean {
   }
 }
 
-function paymentTone(status: string): "neut" | "warn" | "ok" | "bad" {
-  if (status === "paid") return "ok";
-  if (status === "under_review" || status === "awaiting_transfer") return "warn";
+function bookingTone(status: string): "neut" | "warn" | "ok" | "bad" {
+  if (status === "confirmed" || status === "completed") return "ok";
+  if (status === "in_progress") return "warn";
+  if (status === "rejected" || status === "cancelled") return "bad";
+  return "neut";
+}
+
+function waTone(status: string | null): "neut" | "warn" | "ok" | "bad" {
+  if (status === "sent") return "ok";
   if (status === "failed") return "bad";
+  if (status === "not_configured") return "warn";
   return "neut";
 }
 
@@ -90,11 +97,9 @@ export default function BookingsManager({ openRef }: { openRef?: string }) {
   const stats = useMemo(() => {
     const pending = bookings.filter((b) => b.admin_status === "pending").length;
     const approved = bookings.filter((b) => b.admin_status === "approved").length;
+    const rejected = bookings.filter((b) => b.admin_status === "rejected").length;
     const completed = bookings.filter((b) => b.booking_status === "completed").length;
-    const revenue = bookings
-      .filter((b) => b.payment_status === "paid")
-      .reduce((sum, b) => sum + Number(b.amount ?? 0), 0);
-    return { total: bookings.length, pending, approved, completed, revenue };
+    return { total: bookings.length, pending, approved, rejected, completed };
   }, [bookings]);
 
   const filtered = useMemo(() => {
@@ -115,9 +120,9 @@ export default function BookingsManager({ openRef }: { openRef?: string }) {
 
   const statCards = [
     { label: "Total bookings", value: String(stats.total), icon: "ri-calendar-line", tone: "text-foreground-950" },
-    { label: "Pending review", value: String(stats.pending), icon: "ri-time-line", tone: "text-secondary-900" },
+    { label: "Pending approval", value: String(stats.pending), icon: "ri-time-line", tone: "text-secondary-900" },
     { label: "Approved", value: String(stats.approved), icon: "ri-check-double-line", tone: "text-accent-700" },
-    { label: "Revenue (paid)", value: aed(stats.revenue), icon: "ri-money-dollar-circle-line", tone: "text-primary-700" },
+    { label: "Completed", value: String(stats.completed), icon: "ri-flag-2-line", tone: "text-primary-700" },
   ];
 
   return (
@@ -186,8 +191,9 @@ export default function BookingsManager({ openRef }: { openRef?: string }) {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-heading text-base text-foreground-950">{displayBookingRef(b.booking_ref)}</span>
-                        <StatusPill label={PAYMENT_STATUS_LABELS[b.payment_status] ?? b.payment_status} tone={paymentTone(b.payment_status)} />
-                        <StatusPill label={BOOKING_STATUS_LABELS[b.booking_status] ?? b.booking_status} tone="info" />
+                        <StatusPill label={ADMIN_STATUS_LABELS[b.admin_status] ?? b.admin_status} tone={b.admin_status === "approved" ? "ok" : b.admin_status === "rejected" ? "bad" : "warn"} />
+                        <StatusPill label={BOOKING_STATUS_LABELS[b.booking_status] ?? b.booking_status} tone={bookingTone(b.booking_status)} />
+                        <StatusPill label={b.whatsapp_status === "sent" ? "WA sent" : b.whatsapp_status === "failed" ? "WA failed" : "WA pending"} tone={waTone(b.whatsapp_status)} icon="ri-whatsapp-line" />
                       </div>
                       <p className="mt-1 text-sm text-foreground-700 truncate">
                         {b.customer_name} · {b.pet_name ?? "Pet"} · {formatDateOnly(b.preferred_date)} {b.time_slot}

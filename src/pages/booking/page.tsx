@@ -20,9 +20,9 @@ const bookingSlides = [
 ];
 
 const trustItems = [
-  { icon: "ri-bank-line", title: "Simple bank transfer", text: "Transfer to our ADIB account and confirm on WhatsApp — no card needed." },
-  { icon: "ri-whatsapp-line", title: "Instant WhatsApp proof", text: "Send your transfer screenshot in one tap and we verify it for you." },
-  { icon: "ri-shield-star-line", title: "Trusted local groomers", text: "Certified, insured and cage-free care across Abu Dhabi & Al Ain." },
+  { icon: "ri-send-plane-line", title: "Request in one step", text: "Submit your booking request in minutes — there is nothing to pay now." },
+  { icon: "ri-shield-check-line", title: "Approved by our team", text: "We review every request personally and confirm your slot." },
+  { icon: "ri-whatsapp-line", title: "WhatsApp confirmation", text: "Get your approval and full booking details on WhatsApp." },
 ];
 
 function RevealWrap({ children }: { children: React.ReactNode }) {

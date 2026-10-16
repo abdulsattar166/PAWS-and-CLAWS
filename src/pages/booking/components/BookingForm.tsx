@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { bookingSlots } from "@/mocks/pawsAndClaws";
 import {
   useServices,
@@ -22,12 +23,10 @@ import {
   type AddressFields,
   type LocationInfo,
 } from "@/lib/bookingOptions";
-import { type PaymentBookingInfo } from "@/lib/bookingMessage";
 import ServicePicker from "./ServicePicker";
 import AddressFieldsInput from "./AddressFieldsInput";
 import LiveLocationInput from "./LiveLocationInput";
 import BookingSummaryPanel from "./BookingSummaryPanel";
-import PaymentPanel from "./PaymentPanel";
 
 interface BookingFormProps {
   t: (key: string) => string;
@@ -48,6 +47,16 @@ const EMPTY_FORM = {
   notes: "",
   health: "",
 };
+
+interface SubmittedBooking {
+  bookingRef: string;
+  bookingId: string;
+  date: string;
+  slot: string;
+  serviceNames: string;
+  amount: number;
+  customerPhone: string;
+}
 
 function SectionShell({
   id,
@@ -91,7 +100,8 @@ export default function BookingForm({ t }: BookingFormProps) {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [address, setAddress] = useState<AddressFields>({ ...EMPTY_ADDRESS });
   const [location, setLocation] = useState<LocationInfo>({ ...EMPTY_LOCATION });
-  const [payment, setPayment] = useState<PaymentBookingInfo | null>(null);
+  const [consent, setConsent] = useState(false);
+  const [submitted, setSubmitted] = useState<SubmittedBooking | null>(null);
   const honeyRef = useRef<HTMLInputElement>(null);
 
   const { bookedSlots, status: availStatus, reload: reloadAvailability } = useAvailability(date);
@@ -164,7 +174,8 @@ export default function BookingForm({ t }: BookingFormProps) {
   };
 
   const resetForm = () => {
-    setPayment(null);
+    setSubmitted(null);
+    setConsent(false);
     setSelectedServiceIds([]);
     setDate("");
     setSlot("");
@@ -199,9 +210,13 @@ export default function BookingForm({ t }: BookingFormProps) {
                     ? t("booking.err_email")
                     : form.phone.replace(/\D/g, "").length < 7
                       ? t("booking.err_phone")
-                      : missingAddressKeys.length > 0
-                        ? t("booking.err_address")
-                        : "";
+                      : (form.whatsapp.trim() || form.phone).replace(/\D/g, "").length < 7
+                        ? t("booking.err_whatsapp")
+                        : !consent
+                          ? t("booking.err_consent")
+                          : missingAddressKeys.length > 0
+                            ? t("booking.err_address")
+                            : "";
 
     if (msg) {
       setStatus("error");
@@ -209,7 +224,7 @@ export default function BookingForm({ t }: BookingFormProps) {
       if (selectedServiceIds.length === 0) scrollToSection("sec-services");
       else if (!slot || isSlotPast(date, slot)) scrollToSection("sec-arrival");
       else if (missingAddressKeys.length > 0) scrollToSection("sec-location");
-      else if (!form.name.trim() || !EMAIL_RE.test(form.email.trim()) || form.phone.replace(/\D/g, "").length < 7)
+      else if (!form.name.trim() || !EMAIL_RE.test(form.email.trim()) || form.phone.replace(/\D/g, "").length < 7 || !consent)
         scrollToSection("sec-info");
       return;
     }
@@ -227,7 +242,7 @@ export default function BookingForm({ t }: BookingFormProps) {
     goReview();
   };
 
-  // Called from the review step: create the booking, then show the payment page.
+  // Called from the review step: create the booking request, then confirm.
   const submitBooking = async () => {
     if (status === "loading") return;
     setError("");
@@ -297,52 +312,101 @@ export default function BookingForm({ t }: BookingFormProps) {
         return;
       }
 
-      // Booking saved on the server — show the bank transfer + upload step.
+      // Booking request created — show the "awaiting approval" confirmation.
       const serverServices = Array.isArray(data.services)
         ? (data.services as Array<{ name: string; price: number }>)
         : selectedServices.map((s) => ({ name: s.name, price: resolveServicePrice(s, form.pet_size) }));
       const amount = typeof data.amount === "number" ? (data.amount as number) : finalTotal;
-      const subtotal = typeof data.subtotal === "number" ? (data.subtotal as number) : discountInfo.originalTotal;
-      const discount = typeof data.discount === "number" ? (data.discount as number) : discountInfo.discountTotal;
 
-      setPayment({
+      setSubmitted({
         bookingId: (data.bookingId as string) ?? "",
-        ref: "",
-        amount,
-        subtotal,
-        discount,
-        discountLabel: discountInfo.appliedOffers.join(", ") || undefined,
-        currency: (data.currency as string) ?? "AED",
-        services: serverServices,
-        petName: form.pet_name,
-        petType: form.pet_type,
-        petBreed: form.pet_breed,
-        petSize: form.pet_size,
-        customerName: form.name,
-        customerEmail: form.email,
-        customerPhone: form.phone,
-        customerWhatsapp: whatsapp,
+        bookingRef: (data.bookingRef as string) ?? "",
         date,
         slot,
-        address: { ...address },
-        lat: location.lat,
-        lng: location.lng,
-        completeAddress: "",
+        serviceNames: serverServices.map((s) => s.name).join(", "),
+        amount,
+        customerPhone: form.phone,
       });
       setStatus("idle");
-      if (typeof window !== "undefined") window.scrollTo({ top: 200, behavior: "smooth" });
+      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       setStatus("error");
       setError(t("booking.create_error"));
     }
   };
 
-  // Payment step — booking is saved, now show bank transfer + upload.
-  if (payment) {
-    return <PaymentPanel info={payment} t={t} onReset={resetForm} />;
+  // Confirmation — the request has been received and awaits admin approval.
+  if (submitted) {
+    const trackHref = `/find-booking?ref=${encodeURIComponent(submitted.bookingRef)}&phone=${encodeURIComponent(submitted.customerPhone)}`;
+    return (
+      <div className="space-y-6 animate-fade-up text-center">
+        <div className="rounded-3xl bg-background-100 border border-background-200/70 p-6 md:p-9">
+          <span className="mx-auto w-16 h-16 rounded-full bg-accent-500 text-background-950 flex items-center justify-center">
+            <i className="ri-checkbox-circle-line text-3xl" aria-hidden="true"></i>
+          </span>
+          <h2 className="mt-5 font-heading text-2xl md:text-3xl text-foreground-950 leading-tight">
+            {t("booking.request_received_title")}
+          </h2>
+          <p className="mt-3 text-sm md:text-base text-foreground-700 leading-relaxed max-w-xl mx-auto">
+            {t("booking.request_received_text")}
+          </p>
+
+          <dl className="mt-6 text-left divide-y divide-background-200/70">
+            <div className="flex items-start justify-between gap-4 py-3">
+              <dt className="text-xs uppercase tracking-[0.14em] text-foreground-500 font-semibold">{t("find_booking.ref_display")}</dt>
+              <dd className="font-heading text-base text-foreground-950">{submitted.bookingRef}</dd>
+            </div>
+            <div className="flex items-start justify-between gap-4 py-3">
+              <dt className="text-xs uppercase tracking-[0.14em] text-foreground-500 font-semibold">{t("booking.summary_services")}</dt>
+              <dd className="text-sm text-foreground-950 font-medium text-right">{submitted.serviceNames || "-"}</dd>
+            </div>
+            <div className="flex items-start justify-between gap-4 py-3">
+              <dt className="text-xs uppercase tracking-[0.14em] text-foreground-500 font-semibold">{t("booking.summary_appointment")}</dt>
+              <dd className="text-sm text-foreground-950 font-medium text-right">{submitted.date} · {submitted.slot}</dd>
+            </div>
+            <div className="flex items-start justify-between gap-4 py-3">
+              <dt className="text-xs uppercase tracking-[0.14em] text-foreground-500 font-semibold">{t("booking.amount_payable")}</dt>
+              <dd className="font-heading text-lg text-foreground-950">{aed(submitted.amount)}</dd>
+            </div>
+            <div className="flex items-start justify-between gap-4 py-3">
+              <dt className="text-xs uppercase tracking-[0.14em] text-foreground-500 font-semibold">{t("booking.order_payment_status_label")}</dt>
+              <dd>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary-100 text-secondary-900 px-3 py-1 text-xs font-semibold">
+                  <i className="ri-time-line" aria-hidden="true"></i>
+                  {t("booking.status_pending_approval")}
+                </span>
+              </dd>
+            </div>
+          </dl>
+
+          <p className="mt-5 flex items-start gap-2 rounded-2xl bg-accent-100/70 border border-accent-300/60 p-4 text-left text-xs md:text-sm text-accent-900 leading-relaxed">
+            <i className="ri-whatsapp-line mt-0.5 text-[#25D366]" aria-hidden="true"></i>
+            <span>{t("booking.whatsapp_approval_note")}</span>
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Link
+            to={trackHref}
+            className="btn-pulse flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-primary-500 px-6 py-3.5 text-sm font-semibold text-foreground-50 hover:bg-primary-600 transition-colors whitespace-nowrap cursor-pointer"
+          >
+            <i className="ri-search-line" aria-hidden="true"></i>
+            {t("booking.track_spa_booking")}
+          </Link>
+          <button
+            type="button"
+            onClick={resetForm}
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-background-200/70 bg-background-100 px-6 py-3.5 text-sm font-semibold text-foreground-950 hover:border-primary-300 transition-colors whitespace-nowrap cursor-pointer"
+          >
+            <i className="ri-add-line" aria-hidden="true"></i>
+            {t("booking.new_booking")}
+          </button>
+        </div>
+      </div>
+    );
   }
 
-  // Review step — full summary with per-section Edit before payment.
+  // Review step — full summary with per-section Edit before submitting.
   if (step === "review") {
     return (
       <div className="space-y-6 animate-fade-up">
@@ -399,7 +463,7 @@ export default function BookingForm({ t }: BookingFormProps) {
             disabled={status === "loading"}
             className="btn-pulse flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-primary-500 px-6 py-3.5 text-sm font-semibold text-foreground-50 hover:bg-primary-600 transition-colors whitespace-nowrap cursor-pointer disabled:opacity-60"
           >
-            {status === "loading" ? t("booking.processing") : t("booking.pay_continue")}
+            {status === "loading" ? t("booking.processing") : t("booking.submit_request")}
             {status !== "loading" && <i className="ri-arrow-right-line" aria-hidden="true"></i>}
           </button>
         </div>
@@ -410,7 +474,9 @@ export default function BookingForm({ t }: BookingFormProps) {
   const slotsLocked = !date || availStatus === "error";
   const dubaiNow = getDubaiNow();
   const todayStr = dubaiNow.dateString;
-  const noSlotsLeftToday = Boolean(date) && date === todayStr && !hasFutureSlot(date, bookingSlots, dubaiNow);
+  // Customers must not see or select unavailable slots (booked or admin-blocked).
+  const visibleSlots = bookingSlots.filter((s) => !bookedSlots.includes(s));
+  const noSlotsLeftToday = Boolean(date) && date === todayStr && !hasFutureSlot(date, visibleSlots, dubaiNow);
   const inputClass =
     "mt-1.5 w-full px-4 py-3 rounded-xl bg-background-50 border border-background-200/70 text-sm text-foreground-950 outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all duration-300";
   const labelClass = "text-sm font-medium text-foreground-700";
@@ -519,12 +585,11 @@ export default function BookingForm({ t }: BookingFormProps) {
           />
         </div>
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-          {bookingSlots.map((s) => {
-            const booked = bookedSlots.includes(s);
+          {visibleSlots.map((s) => {
             const past = isSlotPast(date, s, dubaiNow);
             const active = slot === s;
-            const disabled = booked || past || slotsLocked;
-            const label = booked ? t("booking.slot_booked") : past ? t("booking.slot_passed") : "";
+            const disabled = past || slotsLocked;
+            const label = past ? t("booking.slot_passed") : "";
             return (
               <button
                 type="button"
@@ -534,13 +599,11 @@ export default function BookingForm({ t }: BookingFormProps) {
                 aria-pressed={active}
                 title={label || undefined}
                 className={`relative px-3 py-2.5 rounded-xl text-xs font-medium leading-tight border transition-all duration-300 ${
-                  booked
-                    ? "bg-background-200/70 border-background-200/70 text-foreground-400 cursor-not-allowed line-through"
-                    : past || disabled
-                      ? "bg-background-50 border-background-200/70 text-foreground-400 cursor-not-allowed"
-                      : active
-                        ? "bg-accent-500 border-accent-500 text-background-950 cursor-pointer"
-                        : "bg-background-50 border-background-200/70 text-foreground-700 hover:border-accent-400 hover:text-foreground-950 cursor-pointer"
+                  past || disabled
+                    ? "bg-background-50 border-background-200/70 text-foreground-400 cursor-not-allowed"
+                    : active
+                      ? "bg-accent-500 border-accent-500 text-background-950 cursor-pointer"
+                      : "bg-background-50 border-background-200/70 text-foreground-700 hover:border-accent-400 hover:text-foreground-950 cursor-pointer"
                 }`}
               >
                 {s}
@@ -554,7 +617,7 @@ export default function BookingForm({ t }: BookingFormProps) {
             ? t("booking.avail_loading")
             : !date
               ? t("booking.err_slot_date")
-              : noSlotsLeftToday
+              : visibleSlots.length === 0 || noSlotsLeftToday
                 ? t("booking.no_slots_today")
                 : availStatus === "error"
                   ? t("booking.avail_error")
@@ -581,10 +644,19 @@ export default function BookingForm({ t }: BookingFormProps) {
           </div>
           <div>
             <label htmlFor="b-whatsapp" className={labelClass}>{t("booking.your_whatsapp")}</label>
-            <input id="b-whatsapp" type="tel" name="whatsapp" value={form.whatsapp} onChange={handleChange} className={inputClass} />
-            <p className="mt-1 text-[11px] text-foreground-500">{t("booking.whatsapp_optional")}</p>
+            <input id="b-whatsapp" type="tel" name="whatsapp" value={form.whatsapp} onChange={handleChange} placeholder={t("booking.your_whatsapp_placeholder")} className={inputClass} />
+            <p className="mt-1 text-[11px] text-foreground-500">{t("booking.whatsapp_required_hint")}</p>
           </div>
         </div>
+        <label className="mt-5 flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+            className="mt-0.5 w-4 h-4 shrink-0 accent-[oklch(var(--primary-500))]"
+          />
+          <span className="text-xs text-foreground-600 leading-relaxed">{t("booking.whatsapp_consent")}</span>
+        </label>
       </SectionShell>
 
       {/* 5. Service Location */}

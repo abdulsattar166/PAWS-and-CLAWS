@@ -48,6 +48,9 @@ export interface BookingRow {
   admin_note: string | null;
   hold_expires_at: string | null;
   paid_at: string | null;
+  whatsapp_status: string | null;
+  whatsapp_sent_at: string | null;
+  whatsapp_error: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -257,4 +260,30 @@ export function formatDateOnly(value: string | null): string {
   if (!match) return value;
   const d = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+}
+
+/**
+ * WhatsApp approval message the administrator sends to the customer (used both
+ * by the automatic sender and the "open WhatsApp manually" fallback).
+ */
+export function buildCustomerApprovalMessage(b: BookingRow): string {
+  const services = (b.services ?? []).map((s) => s.name).join(", ") || "-";
+  return [
+    "*Paws and Claws — Booking Approved ✅*",
+    "",
+    `Hi ${b.customer_name}, great news — your booking request has been approved!`,
+    "",
+    `Booking reference: ${b.booking_ref ?? "-"}`,
+    `Pet: ${b.pet_name ?? "-"}`,
+    `Service: ${services}`,
+    `Date: ${formatDateOnly(b.preferred_date)}`,
+    `Time slot: ${b.time_slot}`,
+    b.customer_address ? `Location: ${b.customer_address}` : "",
+    `Total: ${aed(b.amount)}`,
+    "",
+    "Our mobile grooming van will arrive in the time window above. Reply here if anything changes.",
+    "Thank you for choosing Paws and Claws!",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }

@@ -6,6 +6,7 @@ import AdminSidebar from "./components/AdminSidebar";
 import ComingSoon from "./components/ComingSoon";
 import Dashboard from "./components/Dashboard";
 import BookingsManager from "./components/BookingsManager";
+import AvailabilityManager from "./components/AvailabilityManager";
 import ServicesTabs from "./components/ServicesTabs";
 import PackagesManager from "./components/PackagesManager";
 import OffersManager from "./components/OffersManager";
@@ -19,8 +20,6 @@ import ReviewsManager from "./components/ReviewsManager";
 import GoogleReviewsManager from "./components/GoogleReviewsManager";
 import NavFooterManager from "./components/NavFooterManager";
 import MedicalEditor from "./components/MedicalEditor";
-import PaymentsManager from "./components/PaymentsManager";
-import MessagesManager from "./components/MessagesManager";
 import { ADMIN_NAV_FLAT } from "./adminNav";
 import type { PageKey } from "@/lib/pageContent";
 import { btnGhost } from "./components/AdminUi";
@@ -161,8 +160,7 @@ export default function Admin() {
           <div className="px-4 md:px-8 py-6 md:py-8">
             {tab === "overview" && <Dashboard onGoTo={goTo} />}
             {tab === "bookings" && <BookingsManager openRef={bookingRef} />}
-            {tab === "payments" && <PaymentsManager />}
-            {tab === "messages" && <MessagesManager />}
+            {tab === "availability" && <AvailabilityManager />}
             {tab === "services" && <ServicesTabs />}
             {tab === "packages" && <PackagesManager />}
             {tab === "offers" && <OffersManager />}

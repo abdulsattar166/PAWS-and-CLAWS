@@ -36,15 +36,15 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       {
         key: "bookings",
-        label: "Bookings Management",
+        label: "Booking Approvals",
         icon: "ri-calendar-check-line",
-        desc: "Review every booking, verify payments and update service status.",
+        desc: "Review every booking request and approve or reject it.",
       },
       {
-        key: "payments",
-        label: "Payments Management",
-        icon: "ri-bank-card-line",
-        desc: "Verify bank transfers and reconcile payments.",
+        key: "availability",
+        label: "Availability",
+        icon: "ri-calendar-close-line",
+        desc: "Block dates and time slots so customers can't book them.",
       },
       {
         key: "messages",

@@ -1,33 +1,39 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, functionsBaseUrl, supabaseAnonKey } from "@/lib/supabase";
 import { mapsEmbedSrc, mapsLink } from "@/lib/bookingOptions";
 import {
   BOOKING_STATUS_LABELS,
-  PAYMENT_STATUS_LABELS,
   ADMIN_STATUS_LABELS,
   aed,
   displayBookingRef,
   formatDateOnly,
   formatDateTime,
+  buildCustomerApprovalMessage,
   type BookingRow,
 } from "@/lib/adminTypes";
 import { Modal, btnPrimary, btnGhost, btnDanger, btnAccent, inputCls, labelCls, StatusPill } from "./AdminUi";
 
-const BOOKING_STATUS_OPTIONS = [
-  "pending_payment",
-  "confirmed",
-  "in_progress",
-  "completed",
-  "cancelled",
-  "rejected",
-  "payment_failed",
-];
+const BOOKING_STATUS_OPTIONS = ["pending_payment", "confirmed", "in_progress", "completed", "cancelled", "rejected"];
 
-function paymentTone(status: string): "neut" | "warn" | "ok" | "bad" {
-  if (status === "paid") return "ok";
-  if (status === "under_review" || status === "awaiting_transfer") return "warn";
-  if (status === "failed") return "bad";
+function bookingTone(status: string): "neut" | "warn" | "ok" | "bad" {
+  if (status === "confirmed" || status === "completed") return "ok";
+  if (status === "in_progress") return "warn";
+  if (status === "rejected" || status === "cancelled" || status === "payment_failed") return "bad";
   return "neut";
+}
+
+function waTone(status: string | null): "neut" | "warn" | "ok" | "bad" {
+  if (status === "sent") return "ok";
+  if (status === "failed") return "bad";
+  if (status === "not_configured") return "warn";
+  return "neut";
+}
+
+function waLabel(status: string | null): string {
+  if (status === "sent") return "WhatsApp sent";
+  if (status === "failed") return "WhatsApp failed";
+  if (status === "not_configured") return "WhatsApp not configured";
+  return "Not sent yet";
 }
 
 function addressLines(b: BookingRow): string[] {
@@ -53,27 +59,18 @@ export default function BookingDetail({
 }) {
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState(booking.admin_note ?? "");
-  const [payRef, setPayRef] = useState(booking.payment_ref ?? "");
   const [statusSel, setStatusSel] = useState(booking.booking_status);
   const [feedback, setFeedback] = useState("");
-  const [shotUrl, setShotUrl] = useState(booking.payment_screenshot_url ?? "");
-  const [uploading, setUploading] = useState(false);
-  const [shotMsg, setShotMsg] = useState("");
+  const [waBusy, setWaBusy] = useState(false);
+  const [waMsg, setWaMsg] = useState("");
 
-  // Keep the status / screenshot selectors in sync when the booking is updated
-  // (e.g. after an approve/reject) so a stale value can never revert it.
   useEffect(() => {
     setStatusSel(booking.booking_status);
-    setShotUrl(booking.payment_screenshot_url ?? "");
-  }, [booking.id, booking.booking_status, booking.payment_screenshot_url]);
-
-  useEffect(() => {
     setNote(booking.admin_note ?? "");
-    setPayRef(booking.payment_ref ?? "");
-  }, [booking.id, booking.admin_note, booking.payment_ref]);
+  }, [booking.id, booking.booking_status, booking.admin_note]);
 
-  const patch = async (values: Record<string, unknown>) => {
-    if (!supabase) return;
+  const patch = async (values: Record<string, unknown>): Promise<BookingRow | null> => {
+    if (!supabase) return null;
     setSaving(true);
     setFeedback("");
     const { data, error } = await supabase
@@ -85,69 +82,57 @@ export default function BookingDetail({
     setSaving(false);
     if (error || !data) {
       setFeedback(error?.message ?? "Update failed. Please try again.");
-      return;
+      return null;
     }
     onUpdated(data as BookingRow);
     setFeedback("Saved.");
     setTimeout(() => setFeedback(""), 1800);
+    return data as BookingRow;
   };
 
-  const approve = () =>
-    patch({
-      payment_status: "paid",
-      booking_status: "confirmed",
-      admin_status: "approved",
-      paid_at: booking.paid_at ?? new Date().toISOString(),
-      payment_method: booking.payment_method ?? "bank_transfer",
-    });
-
-  const reject = () =>
-    patch({ payment_status: "failed", booking_status: "rejected", admin_status: "rejected" });
-
-  const underReview = () => patch({ payment_status: "under_review", admin_status: "pending" });
-  const complete = () => patch({ booking_status: "completed", admin_status: "completed" });
-  const cancel = () => patch({ booking_status: "cancelled", payment_status: "failed", admin_status: "rejected" });
-
-  const saveNote = () => patch({ admin_note: note.trim() || null });
-  const saveRef = () => patch({ payment_ref: payRef.trim() || null });
-  const saveStatus = () => patch({ booking_status: statusSel });
-  const startService = () => patch({ booking_status: "in_progress", admin_status: "approved" });
-
-  // Attach the payment screenshot the customer sent over WhatsApp to this record.
-  const handleShotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !supabase) return;
-    setShotMsg("");
-    setUploading(true);
+  // Send (or re-send) the approval message to the customer's WhatsApp and
+  // record the delivery status on the booking so admins can see it.
+  const notifyCustomer = async (): Promise<void> => {
+    setWaBusy(true);
+    setWaMsg("");
     try {
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-      const path = `${booking.id}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("payment-proofs")
-        .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("payment-proofs").getPublicUrl(path);
-      const url = pub.publicUrl;
-      setShotUrl(url);
-      await patch({ payment_screenshot_url: url, payment_status: "under_review" });
-      setShotMsg("Screenshot attached.");
-      setTimeout(() => setShotMsg(""), 2000);
-    } catch (err) {
-      setShotMsg(err instanceof Error ? err.message : "Upload failed. Please try again.");
+      const res = await fetch(`${functionsBaseUrl}/notify-booking`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` },
+        body: JSON.stringify({ bookingId: booking.id }),
+      });
+      const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (data.waLink && (!res.ok || data.status !== "sent")) {
+        // Provider not configured / failed — open WhatsApp so the admin can send it manually.
+        window.open(data.waLink as string, "_blank", "noopener,noreferrer");
+      }
+      // Refresh the row so the new whatsapp_status is reflected.
+      const { data: fresh } = await supabase.from("bookings").select("*").eq("id", booking.id).maybeSingle();
+      if (fresh) onUpdated(fresh as BookingRow);
+      setWaMsg(data.status === "sent" ? "WhatsApp sent." : data.status === "not_configured" ? "Opened WhatsApp to send manually." : "Could not send automatically — opened WhatsApp.");
+    } catch {
+      setWaMsg("Could not reach the WhatsApp service. Open WhatsApp manually below.");
     } finally {
-      setUploading(false);
+      setWaBusy(false);
+      setTimeout(() => setWaMsg(""), 3000);
     }
   };
 
-  const removeShot = () => {
-    setShotUrl("");
-    patch({ payment_screenshot_url: null });
+  const approve = async () => {
+    const updated = await patch({ booking_status: "confirmed", admin_status: "approved" });
+    if (updated) await notifyCustomer();
   };
+  const reject = () => patch({ booking_status: "rejected", admin_status: "rejected" });
+  const startService = () => patch({ booking_status: "in_progress", admin_status: "approved" });
+  const complete = () => patch({ booking_status: "completed", admin_status: "completed" });
+  const cancel = () => patch({ booking_status: "cancelled", admin_status: "rejected" });
+  const saveNote = () => patch({ admin_note: note.trim() || null });
+  const saveStatus = () => patch({ booking_status: statusSel });
 
   const hasGeo = booking.customer_lat != null && booking.customer_lng != null;
-
   const addr = addressLines(booking);
+  const waNumber = (booking.customer_whatsapp || booking.customer_phone || "").replace(/\D/g, "");
+  const manualWaLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(buildCustomerApprovalMessage(booking))}`;
 
   return (
     <Modal
@@ -158,11 +143,8 @@ export default function BookingDetail({
       footer={
         <div className="flex flex-wrap items-center gap-2 w-full justify-between">
           <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={saving} onClick={approve} className={btnAccent}>
-              <i className="ri-check-double-line" aria-hidden="true"></i> Approve payment
-            </button>
-            <button type="button" disabled={saving} onClick={underReview} className={btnGhost}>
-              <i className="ri-file-search-line" aria-hidden="true"></i> Under review
+            <button type="button" disabled={saving || waBusy} onClick={approve} className={btnAccent}>
+              <i className="ri-check-double-line" aria-hidden="true"></i> Approve &amp; notify
             </button>
             <button type="button" disabled={saving} onClick={startService} className={btnGhost}>
               <i className="ri-play-circle-line" aria-hidden="true"></i> Start service
@@ -184,10 +166,39 @@ export default function BookingDetail({
       <div className="space-y-6">
         {/* Status summary */}
         <div className="flex flex-wrap items-center gap-2">
-          <StatusPill label={`Payment: ${PAYMENT_STATUS_LABELS[booking.payment_status] ?? booking.payment_status}`} tone={paymentTone(booking.payment_status)} icon="ri-secure-payment-line" />
-          <StatusPill label={`Booking: ${BOOKING_STATUS_LABELS[booking.booking_status] ?? booking.booking_status}`} tone="info" icon="ri-calendar-check-line" />
+          <StatusPill label={`Booking: ${BOOKING_STATUS_LABELS[booking.booking_status] ?? booking.booking_status}`} tone={bookingTone(booking.booking_status)} icon="ri-calendar-check-line" />
           <StatusPill label={`Admin: ${ADMIN_STATUS_LABELS[booking.admin_status] ?? booking.admin_status}`} tone="neut" icon="ri-shield-user-line" />
+          <StatusPill label={waLabel(booking.whatsapp_status)} tone={waTone(booking.whatsapp_status)} icon="ri-whatsapp-line" />
         </div>
+
+        {/* WhatsApp approval notification */}
+        <section className="rounded-xl bg-background-100 border border-background-200/70 p-4 space-y-3">
+          <h4 className="text-xs uppercase tracking-[0.14em] text-foreground-500 font-semibold flex items-center gap-2">
+            <i className="ri-whatsapp-line text-[#25D366]" aria-hidden="true"></i> WhatsApp notification
+          </h4>
+          <p className="text-[12px] text-foreground-700 leading-relaxed">
+            Approving a booking automatically sends the customer a WhatsApp confirmation with their booking details.
+            {booking.whatsapp_status === "not_configured" && " WhatsApp is not connected yet, so approving opens a pre-filled WhatsApp chat for you to send manually."}
+          </p>
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <span className={`inline-flex items-center gap-1.5 font-semibold ${booking.whatsapp_status === "sent" ? "text-accent-700" : booking.whatsapp_status === "failed" ? "text-red-600" : "text-foreground-600"}`}>
+              <i className={booking.whatsapp_status === "sent" ? "ri-checkbox-circle-line" : booking.whatsapp_status === "failed" ? "ri-error-warning-line" : "ri-time-line"} aria-hidden="true"></i>
+              {waLabel(booking.whatsapp_status)}
+            </span>
+            {booking.whatsapp_sent_at && <span className="text-foreground-500">· {formatDateTime(booking.whatsapp_sent_at)}</span>}
+            {booking.whatsapp_error && <span className="text-foreground-500 break-all">· {booking.whatsapp_error}</span>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={waBusy} onClick={notifyCustomer} className={btnPrimary}>
+              <i className={waBusy ? "ri-loader-4-line animate-spin" : "ri-send-plane-line"} aria-hidden="true"></i>
+              {booking.whatsapp_status === "sent" ? "Resend on WhatsApp" : "Send on WhatsApp"}
+            </button>
+            <a href={manualWaLink} target="_blank" rel="noopener noreferrer" className={btnGhost}>
+              <i className="ri-external-link-line" aria-hidden="true"></i> Open WhatsApp manually
+            </a>
+          </div>
+          {waMsg && <p className="text-xs font-semibold text-accent-700">{waMsg}</p>}
+        </section>
 
         {/* Customer + pet */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -205,7 +216,7 @@ export default function BookingDetail({
               </a>
               {booking.customer_whatsapp && (
                 <a
-                  href={`https://wa.me/${booking.customer_whatsapp.replace(/\D/g, "")}`}
+                  href={`https://wa.me/${waNumber}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#128C4A] hover:text-[#25D366]"
@@ -230,7 +241,7 @@ export default function BookingDetail({
             <h4 className="text-xs uppercase tracking-[0.14em] text-foreground-500 font-semibold mb-2">Appointment</h4>
             <p className="text-sm text-foreground-950">{formatDateOnly(booking.preferred_date)}</p>
             <p className="text-sm text-foreground-700">{booking.time_slot}</p>
-            <p className="mt-2 text-[11px] text-foreground-500">Booked {formatDateTime(booking.created_at)}</p>
+            <p className="mt-2 text-[11px] text-foreground-500">Requested {formatDateTime(booking.created_at)}</p>
           </section>
           <section className="rounded-xl bg-background-100 border border-background-200/70 p-4">
             <h4 className="text-xs uppercase tracking-[0.14em] text-foreground-500 font-semibold mb-2">Service address</h4>
@@ -291,7 +302,7 @@ export default function BookingDetail({
             ))}
           </ul>
           <div className="mt-2 pt-2 border-t border-background-200/70 flex items-center justify-between">
-            <span className="text-sm font-semibold text-foreground-950">Total payable</span>
+            <span className="text-sm font-semibold text-foreground-950">Total</span>
             <span className="font-heading text-lg text-foreground-950">{aed(booking.amount)}</span>
           </div>
         </section>
@@ -310,72 +321,12 @@ export default function BookingDetail({
           </div>
         )}
 
-        {/* Payment verification */}
-        <section className="rounded-xl bg-secondary-50 border border-secondary-200/60 p-4 space-y-3">
-          <h4 className="text-xs uppercase tracking-[0.14em] text-secondary-900 font-semibold flex items-center gap-2">
-            <i className="ri-shield-check-line" aria-hidden="true"></i> Payment verification
-          </h4>
-          <p className="text-[12px] text-foreground-700 leading-relaxed">
-            Confirm the transfer against the customer's WhatsApp screenshot, then record the bank reference and approve.
-            A screenshot alone does not mark a payment verified — approval is always manual.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
-            <div className="flex-1">
-              <label className={labelCls}>Bank / transfer reference</label>
-              <input value={payRef} onChange={(e) => setPayRef(e.target.value)} className={inputCls} placeholder="e.g. ADIB txn ID" />
-            </div>
-            <button type="button" disabled={saving} onClick={saveRef} className={btnGhost}>Save ref</button>
-          </div>
-        </section>
-
-        {/* Payment screenshot */}
-        <section className="rounded-xl bg-background-100 border border-background-200/70 p-4 space-y-3">
-          <h4 className="text-xs uppercase tracking-[0.14em] text-foreground-500 font-semibold flex items-center gap-2">
-            <i className="ri-image-2-line" aria-hidden="true"></i> Payment screenshot
-          </h4>
-          {shotUrl ? (
-            <div className="space-y-2">
-              <a href={shotUrl} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
-                <img
-                  src={shotUrl}
-                  alt="Payment screenshot"
-                  className="max-h-72 w-full rounded-xl border border-background-200/70 object-contain bg-background-50"
-                />
-              </a>
-              <div className="flex flex-wrap gap-2">
-                <a
-                  href={shotUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-background-200/70 bg-background-50 px-3 py-1.5 text-xs font-semibold text-foreground-800 hover:border-primary-300 cursor-pointer"
-                >
-                  <i className="ri-external-link-line" aria-hidden="true"></i> Open full size
-                </a>
-                <button type="button" onClick={removeShot} className={btnDanger}>
-                  <i className="ri-delete-bin-line" aria-hidden="true"></i> Remove
-                </button>
-              </div>
-            </div>
-          ) : (
-            <p className="text-[12px] text-foreground-600 leading-relaxed">
-              No screenshot attached yet. Ask the customer for their bank transfer receipt on WhatsApp, then upload it here.
-            </p>
-          )}
-
-          <label className="inline-flex items-center gap-2 rounded-full border border-background-200/70 bg-background-50 px-4 py-2 text-xs font-semibold text-foreground-800 hover:border-primary-300 cursor-pointer">
-            <i className={uploading ? "ri-loader-4-line animate-spin" : "ri-upload-2-line"} aria-hidden="true"></i>
-            {uploading ? "Uploading…" : "Upload / replace screenshot"}
-            <input type="file" accept="image/*" onChange={handleShotUpload} disabled={uploading} className="hidden" />
-          </label>
-          {shotMsg && <p className="text-xs font-semibold text-accent-700">{shotMsg}</p>}
-        </section>
-
         {/* Customer-visible update + status */}
         <section className="rounded-xl bg-background-100 border border-background-200/70 p-4 space-y-3">
           <h4 className="text-xs uppercase tracking-[0.14em] text-foreground-500 font-semibold flex items-center gap-2">
             <i className="ri-megaphone-line" aria-hidden="true"></i> Update shown to the customer
           </h4>
-          <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={3} className={`${inputCls} resize-none`} placeholder="e.g. Payment received — your groomer will arrive as scheduled."></textarea>
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={3} className={`${inputCls} resize-none`} placeholder="e.g. Your groomer will arrive as scheduled."></textarea>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-end gap-2">
               <div>
